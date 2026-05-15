@@ -38,7 +38,7 @@ export async function remoteok(): Promise<NormalizedJob[]> {
         posted_at: parseDate(j.date),
         url: j.url,
         description_md: htmlToText(j.description),
-        raw_payload: j as Record<string, unknown>,
+        raw_payload: j as unknown as Record<string, unknown>,
       }))
   } catch {
     return []

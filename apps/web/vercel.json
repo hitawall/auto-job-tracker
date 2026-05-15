@@ -1,4 +1,14 @@
 {
   "framework": "nextjs",
-  "installCommand": "cd ../.. && pnpm install --frozen-lockfile"
+  "installCommand": "cd ../.. && pnpm install --frozen-lockfile",
+  "crons": [
+    {
+      "path": "/api/cron/ingest-ats",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/dispatch-alerts",
+      "schedule": "0 8 * * *"
+    }
+  ]
 }

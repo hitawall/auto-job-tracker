@@ -42,7 +42,7 @@ function parseComment(
     posted_at: comment.created_at ?? null,
     url: `https://news.ycombinator.com/item?id=${storyId}#${comment.objectID}`,
     description_md: text.slice(0, 5000),
-    raw_payload: comment as Record<string, unknown>,
+    raw_payload: comment as unknown as Record<string, unknown>,
   }
 }
 

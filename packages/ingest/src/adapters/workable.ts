@@ -29,7 +29,7 @@ export async function workable(slug: string): Promise<NormalizedJob[]> {
         posted_at: parseDate(j.created_at),
         url: j.url,
         description_md: null,
-        raw_payload: j as Record<string, unknown>,
+        raw_payload: j as unknown as Record<string, unknown>,
       }
     })
   } catch {

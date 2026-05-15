@@ -28,7 +28,7 @@ export async function greenhouse(slug: string): Promise<NormalizedJob[]> {
       posted_at: parseDate(j.updated_at),
       url: j.absolute_url,
       description_md: htmlToText(j.content),
-      raw_payload: j as Record<string, unknown>,
+      raw_payload: j as unknown as Record<string, unknown>,
     }))
   } catch {
     return []
