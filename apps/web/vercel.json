@@ -4,11 +4,11 @@
   "crons": [
     {
       "path": "/api/cron/ingest-ats",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 7 * * *"
     },
     {
       "path": "/api/cron/dispatch-alerts",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
