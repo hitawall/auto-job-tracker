@@ -16,7 +16,6 @@ import {
 type Mode = "idle" | "loading" | "sent" | "error"
 
 export default function LoginPage() {
-  const supabase = createClient()
   const [email, setEmail] = useState("")
   const [mode, setMode] = useState<Mode>("idle")
   const [error, setError] = useState("")
@@ -26,6 +25,7 @@ export default function LoginPage() {
     setMode("loading")
     setError("")
 
+    const supabase = createClient()
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -42,6 +42,7 @@ export default function LoginPage() {
   }
 
   async function handleGoogleLogin() {
+    const supabase = createClient()
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
