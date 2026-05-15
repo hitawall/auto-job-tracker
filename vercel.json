@@ -1,4 +1,8 @@
 {
+  "framework": "nextjs",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter web build",
+  "outputDirectory": "apps/web/.next",
   "crons": [
     {
       "path": "/api/cron/ingest-ats",
