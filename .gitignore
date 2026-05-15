@@ -1,0 +1,28 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+build/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# Supabase
+supabase/.branches/
+supabase/.temp/
+
+# Python worker
+worker/__pycache__/
+worker/.venv/
+worker/*.pyc
+worker/.env
+
+# misc
+.DS_Store
+*.log
+.vercel/
