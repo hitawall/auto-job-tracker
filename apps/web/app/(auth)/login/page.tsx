@@ -53,9 +53,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Job Tracker</CardTitle>
+      <Card className="w-full max-w-md rounded-3xl shadow-sm border">
+        <CardHeader className="space-y-1 pb-2">
+          <CardTitle className="text-2xl font-bold text-primary">Job Tracker</CardTitle>
           <CardDescription>
             Sign in to manage your job search and alerts.
           </CardDescription>
@@ -63,7 +63,7 @@ export default function LoginPage() {
 
         <CardContent className="space-y-4">
           {mode === "sent" ? (
-            <div className="rounded-md bg-muted p-4 text-sm text-muted-foreground">
+            <div className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
               Check your inbox — we sent a magic link to{" "}
               <span className="font-medium text-foreground">{email}</span>.
             </div>
@@ -79,6 +79,7 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={mode === "loading"}
+                  className="rounded-xl"
                 />
               </div>
 
@@ -88,7 +89,7 @@ export default function LoginPage() {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full rounded-full"
                 disabled={mode === "loading"}
               >
                 {mode === "loading" ? "Sending…" : "Send magic link"}
@@ -107,7 +108,7 @@ export default function LoginPage() {
 
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full rounded-full"
             onClick={handleGoogleLogin}
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
