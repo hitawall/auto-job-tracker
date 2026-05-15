@@ -29,7 +29,7 @@ export async function ashby(slug: string): Promise<NormalizedJob[]> {
       posted_at: parseDate(j.publishedDate),
       url: j.jobUrl,
       description_md: htmlToText(j.descriptionHtml),
-      raw_payload: j as Record<string, unknown>,
+      raw_payload: j as unknown as Record<string, unknown>,
     }))
   } catch {
     return []

@@ -31,7 +31,7 @@ export async function lever(slug: string): Promise<NormalizedJob[]> {
         posted_at: parseDate(j.createdAt),
         url: j.hostedUrl,
         description_md: j.descriptionPlain ?? null,
-        raw_payload: j as Record<string, unknown>,
+        raw_payload: j as unknown as Record<string, unknown>,
       }
     })
   } catch {
