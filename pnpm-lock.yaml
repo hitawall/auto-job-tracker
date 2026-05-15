@@ -20,6 +20,9 @@ importers:
       '@radix-ui/react-slot':
         specifier: ^1.2.4
         version: 1.2.4(@types/react@19.2.14)(react@19.2.4)
+      '@repo/ingest':
+        specifier: workspace:*
+        version: link:../../packages/ingest
       '@repo/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -75,6 +78,12 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+
+  packages/ingest:
+    dependencies:
+      '@repo/types':
+        specifier: workspace:*
+        version: link:../types
 
   packages/types:
     dependencies:
