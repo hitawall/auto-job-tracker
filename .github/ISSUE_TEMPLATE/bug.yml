@@ -1,0 +1,62 @@
+name: Bug
+description: Something is broken or behaving unexpectedly
+title: "fix: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: What's broken
+      placeholder: Clear one-sentence description of the problem.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Go to /jobs
+        2. Apply location filter "London"
+        3. Reload page
+        4. Filter is lost
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      placeholder: Filter should persist on reload via URL search params.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behaviour
+      placeholder: Filter resets to empty on reload.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      options:
+        - "P0 — Blocks core flow (auth, data loss)"
+        - "P1 — Feature broken, workaround exists"
+        - "P2 — Minor / cosmetic"
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Environment / context
+      placeholder: |
+        - Browser: Chrome 123
+        - URL: /jobs?location=London
+        - Console errors: TypeError: Cannot read...
+    validations:
+      required: false

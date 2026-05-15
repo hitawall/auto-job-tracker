@@ -1,0 +1,57 @@
+name: Feature
+description: New functionality or user-facing capability
+title: "feat(phase-?): "
+labels: ["feature"]
+body:
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase
+      options:
+        - Phase 0 — Foundation
+        - Phase 1 — ATS Ingestion
+        - Phase 2 — Preferences & Alerts
+        - Phase 3 — Resume Optimisation
+        - Phase 4 — Watchlist Scraping
+        - Phase 5 — Notifications & Tracker
+    validations:
+      required: true
+
+  - type: textarea
+    id: user-story
+    attributes:
+      label: User story
+      description: "As a [user], I want [goal] so that [benefit]."
+      placeholder: "As a job seeker, I want to filter jobs by location so that I only see relevant postings."
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance criteria
+      description: Bullet list of testable conditions. Each item maps to a checkbox in the PR.
+      placeholder: |
+        - [ ] Filter persists in URL search params
+        - [ ] Empty state shows when no results match
+        - [ ] Works on mobile (375px)
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files / areas affected
+      placeholder: |
+        - apps/web/app/(app)/jobs/page.tsx
+        - packages/ingest/src/adapters/greenhouse.ts
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes / open questions
+      placeholder: Anything the implementer should know — edge cases, dependencies, risks.
+    validations:
+      required: false

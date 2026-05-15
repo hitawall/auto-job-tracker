@@ -46,12 +46,12 @@ Migrations live in `supabase/migrations/` and must be run manually in the Supaba
 
 ```
 main  ← protected, production, Vercel auto-deploys
-  └── feature/<issue-N>-<slug>
-  └── fix/<issue-N>-<slug>
-  └── chore/<slug>
+  └── feature/issue-N-<slug>
+  └── fix/issue-N-<slug>
+  └── chore/issue-N-<slug>
 ```
 
-- One issue per branch. Branch name includes issue number.
+- One issue per branch. **Issue number is mandatory in all branch names** — create an issue first.
 - PR body must contain `Closes #N`.
 - Squash and merge only.
 - `pnpm typecheck + lint + build` must pass before merging.

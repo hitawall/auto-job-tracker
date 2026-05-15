@@ -6,7 +6,7 @@
 main          ← production (Vercel auto-deploys from here)
   └── feature/issue-N-short-description   (features)
   └── fix/issue-N-short-description       (bug fixes)
-  └── chore/short-description             (tooling, deps, config)
+  └── chore/issue-N-short-description     (tooling, deps, config)
 ```
 
 **main is locked** — no direct pushes. All changes go through a PR.
@@ -32,9 +32,11 @@ main          ← production (Vercel auto-deploys from here)
 
 | Type | Pattern | Example |
 |---|---|---|
-| Feature | `feature/<issue-N>-<slug>` | `feature/5-ats-adapters` |
-| Bug fix | `fix/<issue-N>-<slug>` | `fix/12-greenhouse-parse-error` |
-| Chore | `chore/<slug>` | `chore/update-deps` |
+| Feature | `feature/issue-N-<slug>` | `feature/issue-5-ats-adapters` |
+| Bug fix | `fix/issue-N-<slug>` | `fix/issue-12-greenhouse-parse-error` |
+| Chore | `chore/issue-N-<slug>` | `chore/issue-11-agile-conventions` |
+
+**The issue number is mandatory in all branch names** — it must be traceable back to a GitHub Issue without reading git log. Create an issue first if one doesn't exist.
 
 ## Commit messages
 
