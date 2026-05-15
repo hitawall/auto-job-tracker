@@ -1,0 +1,30 @@
+name: Chore
+description: Maintenance, tooling, dependency update, refactor, or config change
+title: "chore: "
+labels: ["chore"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What needs doing
+      placeholder: Update pnpm to v10, add Vitest, configure ESLint rule...
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      placeholder: Security patch / developer experience / CI speed...
+    validations:
+      required: true
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks / things to verify after
+      placeholder: |
+        - Run pnpm build to confirm no breakage
+        - Check Vercel deploy still passes
+    validations:
+      required: false
