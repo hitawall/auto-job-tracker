@@ -23,6 +23,9 @@ importers:
       '@repo/ingest':
         specifier: workspace:*
         version: link:../../packages/ingest
+      '@repo/match':
+        specifier: workspace:*
+        version: link:../../packages/match
       '@repo/types':
         specifier: workspace:*
         version: link:../../packages/types
@@ -80,6 +83,12 @@ importers:
         version: 5.9.3
 
   packages/ingest:
+    dependencies:
+      '@repo/types':
+        specifier: workspace:*
+        version: link:../types
+
+  packages/match:
     dependencies:
       '@repo/types':
         specifier: workspace:*
