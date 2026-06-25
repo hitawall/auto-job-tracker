@@ -1,0 +1,18 @@
+name: Ingest ATS Feeds
+
+on:
+  schedule:
+    - cron: "0 1,5,9,13,17,21 * * *"
+  workflow_dispatch:
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call ingest-ats endpoint
+        run: |
+          curl -sf -X GET "$APP_URL/api/cron/ingest-ats" \
+            -H "Authorization: Bearer $CRON_SECRET" | cat
+        env:
+          APP_URL: ${{ secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

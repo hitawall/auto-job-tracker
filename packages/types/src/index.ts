@@ -9,6 +9,10 @@ export const JobSource = z.enum([
   "hn",
   "linkedin",
   "portal",
+  "indeed",
+  "glassdoor",
+  "zip_recruiter",
+  "google",
 ])
 export type JobSource = z.infer<typeof JobSource>
 
@@ -52,3 +56,10 @@ export const Preference = z.object({
   seniority: z.array(z.string()),
 })
 export type Preference = z.infer<typeof Preference>
+
+export const PreferenceRow = Preference.extend({
+  alert_email: z.boolean(),
+  last_alert_sent_at: z.string().datetime().nullable(),
+  updated_at: z.string().datetime(),
+})
+export type PreferenceRow = z.infer<typeof PreferenceRow>

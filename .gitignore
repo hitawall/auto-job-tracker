@@ -26,3 +26,5 @@ worker/.env
 .DS_Store
 *.log
 .vercel/
+.vercel
+.env*

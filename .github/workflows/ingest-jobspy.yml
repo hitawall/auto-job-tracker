@@ -1,0 +1,22 @@
+name: Ingest Jobs via JobSpy
+
+on:
+  schedule:
+    - cron: "0 3,7,11,15,19,23 * * *"
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        run: pip install -r worker/requirements.txt
+      - name: Run JobSpy scraper
+        run: python worker/scrape.py
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}

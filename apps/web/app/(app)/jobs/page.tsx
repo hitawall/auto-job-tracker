@@ -61,6 +61,7 @@ export default async function JobsPage({
   if (filters.since) {
     const days = parseInt(filters.since, 10)
     if (!isNaN(days)) {
+      // eslint-disable-next-line react-hooks/purity
       const cutoff = new Date(Date.now() - days * 86400_000).toISOString()
       query = query.gte("posted_at", cutoff)
     }
