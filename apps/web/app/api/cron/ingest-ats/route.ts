@@ -23,7 +23,7 @@ async function upsertJobs(supabase: ReturnType<typeof supabaseAdmin>, jobs: Norm
   if (jobs.length === 0) return
   const { error } = await supabase.from("jobs").upsert(jobs, {
     onConflict: "source,source_job_id",
-    ignoreDuplicates: true,
+    ignoreDuplicates: false,
   })
   if (error) console.error("upsert error", error.message)
 }
@@ -36,15 +36,23 @@ export async function GET(request: Request) {
 
   const supabase = supabaseAdmin()
   let total = 0
+  const sources: Record<string, number> = {}
 
   // Per-company adapters
   for (const [source, slugs] of Object.entries(companies) as [CompanySource, string[]][]) {
     const adapter = COMPANY_ADAPTERS[source]
     if (!adapter) continue
     for (const slug of slugs) {
-      const jobs = await adapter(slug)
+      let jobs: NormalizedJob[] = []
+      try {
+        jobs = await adapter(slug)
+      } catch (err) {
+        console.error(`[${source}/${slug}] adapter error:`, err)
+      }
+      console.log(`[${source}/${slug}] ${jobs.length} jobs`)
       await upsertJobs(supabase, jobs)
       total += jobs.length
+      sources[source] = (sources[source] ?? 0) + jobs.length
     }
   }
 
@@ -53,6 +61,8 @@ export async function GET(request: Request) {
   await upsertJobs(supabase, remoteJobs)
   await upsertJobs(supabase, hnJobs)
   total += remoteJobs.length + hnJobs.length
+  sources.remoteok = remoteJobs.length
+  sources.hn = hnJobs.length
 
-  return NextResponse.json({ ok: true, ingested: total })
+  return NextResponse.json({ ok: true, total, sources })
 }

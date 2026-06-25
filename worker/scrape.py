@@ -121,7 +121,7 @@ def main():
             supabase.table("jobs").upsert(
                 rows,
                 on_conflict="source,source_job_id",
-                ignore_duplicates=True,
+                ignore_duplicates=False,
             ).execute()
             total += len(rows)
             print(f"[OK] {term!r}: upserted {len(rows)} jobs")
