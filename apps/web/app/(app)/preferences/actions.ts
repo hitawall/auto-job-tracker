@@ -3,12 +3,14 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
-export async function savePreferences(formData: FormData) {
+export type SaveResult = { ok: true } | { ok: false; error: string }
+
+export async function savePreferences(_prev: SaveResult | null, formData: FormData): Promise<SaveResult> {
   const supabase = await createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
-  if (!user) return
+  if (!user) return { ok: false, error: "Not authenticated" }
 
   function parseList(key: string): string[] {
     return (formData.get(key) as string | null)
@@ -32,6 +34,9 @@ export async function savePreferences(formData: FormData) {
     updated_at: new Date().toISOString(),
   }
 
-  await supabase.from("preferences").upsert(payload, { onConflict: "user_id" })
+  const { error } = await supabase.from("preferences").upsert(payload, { onConflict: "user_id" })
+  if (error) return { ok: false, error: error.message }
+
   revalidatePath("/preferences")
+  return { ok: true }
 }
