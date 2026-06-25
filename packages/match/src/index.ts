@@ -70,6 +70,8 @@ export function score(job: ScoredJob, prefs: Omit<Preference, "user_id">): Match
     if (hit) {
       points += 15
       reasons.push(`location matches "${hit}"`)
+    } else {
+      return { score: 0, reasons: [`location "${job.location ?? "unknown"}" not in preferences`] }
     }
   }
 
