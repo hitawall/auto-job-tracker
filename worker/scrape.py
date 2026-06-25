@@ -25,6 +25,8 @@ SEARCH_TERMS = [
 
 SITES = ["indeed", "glassdoor"]
 
+LOCATIONS = ["Remote", "India"]
+
 REMOTE_PATTERNS = re.compile(r"\b(remote|distributed|anywhere|wfh|work from home)\b", re.I)
 HYBRID_PATTERNS = re.compile(r"\b(hybrid|flexible|part.?remote)\b", re.I)
 
@@ -95,38 +97,40 @@ def main():
     total = 0
 
     for term in SEARCH_TERMS:
-        try:
-            df = scrape_jobs(
-                site_name=SITES,
-                search_term=term,
-                results_wanted=50,
-                hours_old=24,
-                description_format="markdown",
-            )
-        except Exception as e:
-            print(f"[WARN] scrape_jobs({term!r}) failed: {e}")
-            continue
+        for loc in LOCATIONS:
+            try:
+                df = scrape_jobs(
+                    site_name=SITES,
+                    search_term=term,
+                    location=loc,
+                    results_wanted=50,
+                    hours_old=24,
+                    description_format="markdown",
+                )
+            except Exception as e:
+                print(f"[WARN] scrape_jobs({term!r} @ {loc!r}) failed: {e}")
+                continue
 
-        rows = []
-        for _, row in df.iterrows():
-            site = str(row.get("site") or "")
-            record = normalize(row.to_dict(), site)
-            if record:
-                rows.append(record)
+            rows = []
+            for _, row in df.iterrows():
+                site = str(row.get("site") or "")
+                record = normalize(row.to_dict(), site)
+                if record:
+                    rows.append(record)
 
-        if not rows:
-            continue
+            if not rows:
+                continue
 
-        try:
-            supabase.table("jobs").upsert(
-                rows,
-                on_conflict="source,source_job_id",
-                ignore_duplicates=False,
-            ).execute()
-            total += len(rows)
-            print(f"[OK] {term!r}: upserted {len(rows)} jobs")
-        except Exception as e:
-            print(f"[ERROR] upsert({term!r}): {e}")
+            try:
+                supabase.table("jobs").upsert(
+                    rows,
+                    on_conflict="source,source_job_id",
+                    ignore_duplicates=False,
+                ).execute()
+                total += len(rows)
+                print(f"[OK] {term!r} @ {loc!r}: upserted {len(rows)} jobs")
+            except Exception as e:
+                print(f"[ERROR] upsert({term!r} @ {loc!r}): {e}")
 
     print(f"Done — {total} total jobs upserted")
 
