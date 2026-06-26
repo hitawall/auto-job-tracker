@@ -95,18 +95,18 @@ export async function GET(request: Request) {
     d.email_found = !!email
 
     if (email) {
-      const sent = await sendJobAlert(
+      const result = await sendJobAlert(
         email,
         matches.map(({ job, score: s, reasons }) => ({
           title: job.title, company: job.company, location: job.location, url: job.url, score: s, reasons,
         })),
       )
-      d.email_sent = sent
-      if (sent) {
+      d.email_sent = result.ok
+      d.email_error = result.error ?? null
+      d.resend_from = process.env.RESEND_FROM ?? "(not set — using default)"
+      if (result.ok) {
         emailsSent++
         await supabase.from("preferences").update({ last_alert_sent_at: now.toISOString() }).eq("user_id", pref.user_id)
-      } else {
-        console.error(`[alerts] email failed for user ${pref.user_id}`)
       }
     }
 
