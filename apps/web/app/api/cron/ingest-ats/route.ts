@@ -38,6 +38,14 @@ export async function GET(request: Request) {
   let total = 0
   const sources: Record<string, number> = {}
 
+  // Expire jobs older than 30 days
+  const expiryCutoff = new Date(Date.now() - 30 * 86400_000).toISOString()
+  const { count: expired } = await supabase
+    .from("jobs")
+    .delete({ count: "exact" })
+    .lt("posted_at", expiryCutoff)
+  console.log(`[cleanup] expired ${expired ?? 0} jobs older than 30 days`)
+
   // Per-company adapters
   for (const [source, slugs] of Object.entries(companies) as [CompanySource, string[]][]) {
     const adapter = COMPANY_ADAPTERS[source]

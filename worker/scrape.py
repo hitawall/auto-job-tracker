@@ -1,7 +1,7 @@
 import os
 import hashlib
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from dotenv import load_dotenv
 from jobspy import scrape_jobs
@@ -84,8 +84,18 @@ def normalize(row, site):
     }
 
 
+def expire_jobs(supabase):
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
+    try:
+        result = supabase.table("jobs").delete().lt("posted_at", cutoff).execute()
+        print(f"[cleanup] expired jobs older than 30 days")
+    except Exception as e:
+        print(f"[WARN] expire_jobs: {e}")
+
+
 def main():
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    expire_jobs(supabase)
     total = 0
 
     for term in SEARCH_TERMS:
