@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Call ingest-ats endpoint
         run: |
-          curl -sf -X GET "$APP_URL/api/cron/ingest-ats" \
+          curl -sfL -X GET "$APP_URL/api/cron/ingest-ats" \
             -H "Authorization: Bearer $CRON_SECRET" | cat
         env:
           APP_URL: ${{ secrets.APP_URL }}
