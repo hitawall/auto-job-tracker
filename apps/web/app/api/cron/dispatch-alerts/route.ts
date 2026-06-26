@@ -106,14 +106,16 @@ export async function GET(request: Request) {
           reasons,
         })),
       )
-      if (sent) emailsSent++
-      else console.error(`[alerts] email failed for user ${pref.user_id}`)
+      if (sent) {
+        emailsSent++
+        await supabase
+          .from("preferences")
+          .update({ last_alert_sent_at: now.toISOString() })
+          .eq("user_id", pref.user_id)
+      } else {
+        console.error(`[alerts] email failed for user ${pref.user_id}`)
+      }
     }
-
-    await supabase
-      .from("preferences")
-      .update({ last_alert_sent_at: now.toISOString() })
-      .eq("user_id", pref.user_id)
   }
 
   return NextResponse.json({ ok: true, users: prefs?.length ?? 0, emails_sent: emailsSent })
