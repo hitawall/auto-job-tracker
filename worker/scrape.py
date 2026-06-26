@@ -23,7 +23,7 @@ SEARCH_TERMS = [
     "Product Designer",
 ]
 
-SITES = ["indeed", "glassdoor"]
+SITES = ["indeed", "zip_recruiter"]
 
 LOCATIONS = ["Remote", "India"]
 
@@ -45,14 +45,6 @@ def infer_remote(is_remote, location):
 
 
 def make_source_id(site, url):
-    """Stable ID from the job URL — last non-empty path segment, else URL hash."""
-    try:
-        from urllib.parse import urlparse
-        parts = [p for p in urlparse(url).path.split("/") if p]
-        if parts:
-            return f"{site}_{parts[-1]}"
-    except Exception:
-        pass
     return f"{site}_{hashlib.md5(url.encode()).hexdigest()[:16]}"
 
 
@@ -120,6 +112,15 @@ def main():
 
             if not rows:
                 continue
+
+            seen = set()
+            deduped = []
+            for r in rows:
+                key = (r["source"], r["source_job_id"])
+                if key not in seen:
+                    seen.add(key)
+                    deduped.append(r)
+            rows = deduped
 
             try:
                 supabase.table("jobs").upsert(

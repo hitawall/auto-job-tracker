@@ -11,7 +11,7 @@ jobs:
     steps:
       - name: Call dispatch-alerts endpoint
         run: |
-          curl -sf -X GET "$APP_URL/api/cron/dispatch-alerts" \
+          curl -sfL -X GET "$APP_URL/api/cron/dispatch-alerts" \
             -H "Authorization: Bearer $CRON_SECRET" | cat
         env:
           APP_URL: ${{ secrets.APP_URL }}
