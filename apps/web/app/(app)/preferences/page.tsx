@@ -93,14 +93,15 @@ function PreferencesForm({ pref }: Props) {
         </fieldset>
 
         <div>
-          <label className={labelClass}>Minimum salary (USD / year)</label>
+          <label className={labelClass}>Minimum salary (₹ / year)</label>
           <input
             type="number"
-            name="min_salary_usd"
-            defaultValue={pref?.min_salary_usd ?? ""}
-            placeholder="120000"
+            name="min_salary_inr"
+            defaultValue={pref?.min_salary_inr ?? ""}
+            placeholder="2000000"
             className={fieldClass}
           />
+          <p className={hintClass}>Jobs without a listed salary are never filtered out.</p>
         </div>
       </div>
 

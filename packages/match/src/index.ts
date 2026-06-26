@@ -8,7 +8,7 @@ export interface MatchResult {
 type ScoredJob = Pick<
   NormalizedJob,
   "title" | "company" | "location" | "remote" | "description_md"
-> & { min_salary_usd?: number | null }
+> & { min_salary_inr?: number | null }
 
 function lower(s: string | null | undefined) {
   return (s ?? "").toLowerCase()
@@ -85,9 +85,10 @@ export function score(job: ScoredJob, prefs: Omit<Preference, "user_id">): Match
   }
 
   // ── Salary floor ──────────────────────────────────────────────────────────
-  if (prefs.min_salary_usd && job.min_salary_usd) {
-    if (job.min_salary_usd < prefs.min_salary_usd) {
-      return { score: 0, reasons: [`salary ${job.min_salary_usd} below floor ${prefs.min_salary_usd}`] }
+  // Only filter when the job actually publishes a salary — most Indian postings don't.
+  if (prefs.min_salary_inr && job.min_salary_inr) {
+    if (job.min_salary_inr < prefs.min_salary_inr) {
+      return { score: 0, reasons: [`salary ₹${job.min_salary_inr} below floor ₹${prefs.min_salary_inr}`] }
     }
     points += 10
     reasons.push("salary meets floor")
