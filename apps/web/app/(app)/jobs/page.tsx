@@ -25,6 +25,7 @@ const REMOTE_CHIPS: Record<string, string> = {
 
 interface SearchParams {
   q?: string
+  company?: string
   location?: string
   remote?: string
   since?: string
@@ -70,6 +71,9 @@ export default async function JobsPage({
   if (filters.q) {
     query = query.ilike("title", `%${filters.q}%`)
   }
+  if (filters.company) {
+    query = query.ilike("company", `%${filters.company}%`)
+  }
   if (filters.location) {
     query = query.ilike("location", `%${filters.location}%`)
   } else if (prefLocations.length > 0) {
@@ -83,9 +87,9 @@ export default async function JobsPage({
     query = query.eq("remote", filters.remote as RemoteMode)
   }
   if (filters.since) {
-    const days = parseInt(filters.since, 10)
-    if (!isNaN(days)) {
-      const cutoff = new Date(Date.now() - days * 86400_000).toISOString()
+    const hours = parseInt(filters.since, 10)
+    if (!isNaN(hours)) {
+      const cutoff = new Date(Date.now() - hours * 3_600_000).toISOString()
       query = query.gte("posted_at", cutoff)
     }
   }
