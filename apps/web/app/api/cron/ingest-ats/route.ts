@@ -56,6 +56,29 @@ export async function GET(request: Request) {
     }
   }
 
+  // User-configured portals from company_watchlist
+  const { data: portals } = await supabase
+    .from("company_portals")
+    .select("company_name,ats_type,ats_slug")
+    .eq("is_active", true)
+    .not("ats_type", "is", null)
+    .not("ats_slug", "is", null)
+
+  for (const portal of portals ?? []) {
+    const adapter = COMPANY_ADAPTERS[portal.ats_type as CompanySource]
+    if (!adapter) continue
+    let jobs: NormalizedJob[] = []
+    try {
+      jobs = await adapter(portal.ats_slug)
+    } catch (err) {
+      console.error(`[watchlist/${portal.company_name}] adapter error:`, err)
+    }
+    console.log(`[watchlist/${portal.company_name}] ${jobs.length} jobs`)
+    await upsertJobs(supabase, jobs)
+    total += jobs.length
+    sources.watchlist = (sources.watchlist ?? 0) + jobs.length
+  }
+
   // Global feeds
   const [remoteJobs, hnJobs] = await Promise.all([remoteok(), hn()])
   await upsertJobs(supabase, remoteJobs)
