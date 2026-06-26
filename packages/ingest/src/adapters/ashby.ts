@@ -4,12 +4,12 @@ import { htmlToText, inferRemote, parseDate } from "../normalize"
 interface AshbyPosting {
   id: string
   title: string
-  locationName?: string
+  location?: string
   isRemote?: boolean
-  publishedDate?: string
+  workplaceType?: string
+  publishedAt?: string
   jobUrl: string
   descriptionHtml?: string
-  employmentType?: string
 }
 
 export async function ashby(slug: string): Promise<NormalizedJob[]> {
@@ -18,15 +18,16 @@ export async function ashby(slug: string): Promise<NormalizedJob[]> {
       next: { revalidate: 0 },
     })
     if (!res.ok) return []
-    const data = (await res.json()) as { jobPostings: AshbyPosting[] }
-    return data.jobPostings.map((j) => ({
+    const data = (await res.json()) as { jobs?: AshbyPosting[]; jobPostings?: AshbyPosting[] }
+    const postings = data.jobs ?? data.jobPostings ?? []
+    return postings.map((j) => ({
       source: "ashby",
       source_job_id: j.id,
       title: j.title,
       company: slug,
-      location: j.locationName ?? null,
-      remote: j.isRemote ? "remote" : inferRemote(j.locationName),
-      posted_at: parseDate(j.publishedDate),
+      location: j.location ?? null,
+      remote: j.isRemote ? "remote" : inferRemote(j.workplaceType ?? j.location),
+      posted_at: parseDate(j.publishedAt),
       url: j.jobUrl,
       description_md: htmlToText(j.descriptionHtml),
       raw_payload: j as unknown as Record<string, unknown>,
