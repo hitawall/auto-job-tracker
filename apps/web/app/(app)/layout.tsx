@@ -29,6 +29,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               Jobs
             </Link>
             <Link
+              href="/watchlist"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Watchlist
+            </Link>
+            <Link
               href="/preferences"
               className="text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
