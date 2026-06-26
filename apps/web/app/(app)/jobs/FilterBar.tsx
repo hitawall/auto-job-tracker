@@ -44,16 +44,25 @@ export function FilterBar() {
         <option value="hybrid">Hybrid</option>
         <option value="onsite">On-site</option>
       </select>
+      <Input
+        placeholder="Company"
+        defaultValue={params.get("company") ?? ""}
+        onChange={(e) => update("company", e.target.value)}
+        className="rounded-xl max-w-[160px]"
+      />
       <select
         defaultValue={params.get("since") ?? ""}
         onChange={(e) => update("since", e.target.value)}
         className="h-10 rounded-xl border border-input bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
       >
         <option value="">Any time</option>
-        <option value="1">Last 24 h</option>
-        <option value="3">Last 3 days</option>
-        <option value="7">Last 7 days</option>
-        <option value="30">Last 30 days</option>
+        <option value="4">Last 4 hours</option>
+        <option value="8">Last 8 hours</option>
+        <option value="12">Last 12 hours</option>
+        <option value="24">Last 24 hours</option>
+        <option value="72">Last 3 days</option>
+        <option value="168">Last 7 days</option>
+        <option value="720">Last 30 days</option>
       </select>
     </div>
   )
