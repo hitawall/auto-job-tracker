@@ -52,7 +52,7 @@ export async function GET(request: Request) {
       job_titles: pref.job_titles ?? [],
       locations: pref.locations ?? [],
       remote_modes: pref.remote_modes ?? [],
-      min_salary_usd: pref.min_salary_usd ?? null,
+      min_salary_inr: pref.min_salary_inr ?? null,
       keywords_must: pref.keywords_must ?? [],
       keywords_block: pref.keywords_block ?? [],
       seniority: pref.seniority ?? [],

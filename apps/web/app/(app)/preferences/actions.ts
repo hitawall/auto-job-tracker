@@ -26,7 +26,7 @@ export async function savePreferences(_prev: SaveResult | null, formData: FormDa
     job_titles: parseList("job_titles"),
     locations: parseList("locations"),
     remote_modes: remoteRaw,
-    min_salary_usd: Number(formData.get("min_salary_usd")) || null,
+    min_salary_inr: Number(formData.get("min_salary_inr")) || null,
     keywords_must: parseList("keywords_must"),
     keywords_block: parseList("keywords_block"),
     seniority: parseList("seniority"),

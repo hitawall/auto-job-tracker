@@ -50,7 +50,7 @@ export const Preference = z.object({
   job_titles: z.array(z.string()),
   locations: z.array(z.string()),
   remote_modes: z.array(RemoteMode),
-  min_salary_usd: z.number().int().nullable(),
+  min_salary_inr: z.number().int().nullable(),
   keywords_must: z.array(z.string()),
   keywords_block: z.array(z.string()),
   seniority: z.array(z.string()),
