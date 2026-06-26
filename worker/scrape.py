@@ -98,7 +98,7 @@ def main():
                     results_wanted=50,
                     hours_old=24,
                     description_format="markdown",
-                    country_indeed="IN",
+                    country_indeed="india",
                     linkedin_fetch_description=True,
                 )
             except Exception as e:
