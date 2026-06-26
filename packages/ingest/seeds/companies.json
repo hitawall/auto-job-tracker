@@ -7,9 +7,8 @@
     "gusto", "rippling", "lattice", "retool"
   ],
   "lever": [
-    "netflix", "reddit", "hubspot", "zendesk", "intercom",
-    "pagerduty", "gitlab", "klaviyo", "segment", "mixpanel",
-    "amplitude", "heap", "launchdarkly", "fastly", "cloudflare"
+    "cloudflare", "klaviyo", "amplitude", "mixpanel", "launchdarkly",
+    "intercom", "pagerduty", "fastly", "zendesk", "gitlab"
   ],
   "ashby": [
     "vercel", "clerk", "posthog", "baseten", "replit", "modal",
@@ -17,20 +16,11 @@
     "loom", "mercury", "ramp"
   ],
   "workable": [
-    "typeform", "hotjar", "beat", "skroutz",
-    "blueground", "epignosis", "accusoft"
+    "blueground", "epignosis", "accusoft", "beat", "skroutz"
   ],
-  "workday": [
-    "salesforce|1|External_Career_Site",
-    "cisco|5|External",
-    "adobe|5|external_experienced",
-    "paypal|1|jobs",
-    "servicenow|1|External",
-    "mastercard|1|Mastercard_Careers",
-    "deloitte|1|consulting_us"
-  ],
+  "workday": [],
   "smartrecruiters": [
-    "BOSCH", "Lidl", "LinkedIn", "Delivery-Hero", "Zalando"
+    "BoschGroup", "DeliveryHero"
   ],
   "breezy": [],
   "recruitee": []
