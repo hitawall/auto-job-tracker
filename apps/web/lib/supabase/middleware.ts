@@ -38,7 +38,7 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Public routes that don't require authentication
-  const publicPaths = ["/login", "/auth/callback"]
+  const publicPaths = ["/login", "/auth/callback", "/api/cron"]
   const isPublicPath = publicPaths.some((p) => pathname.startsWith(p))
 
   if (!user && !isPublicPath) {
