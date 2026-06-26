@@ -7,6 +7,8 @@ from dotenv import load_dotenv
 from jobspy import scrape_jobs
 from supabase import create_client
 
+from portal_scraper import scrape_portals_from_db
+
 load_dotenv()
 
 SUPABASE_URL = os.environ["SUPABASE_URL"]
@@ -135,7 +137,8 @@ def main():
             except Exception as e:
                 print(f"[ERROR] upsert({term!r} @ {loc!r}): {e}")
 
-    print(f"Done — {total} total jobs upserted")
+    portal_total = scrape_portals_from_db(supabase)
+    print(f"Done — {total} JobSpy + {portal_total} portal jobs upserted")
 
 
 if __name__ == "__main__":

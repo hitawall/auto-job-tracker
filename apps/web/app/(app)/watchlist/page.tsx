@@ -52,7 +52,9 @@ export default async function WatchlistPage() {
           </button>
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Supported: boards.greenhouse.io, jobs.lever.co, jobs.ashbyhq.com, apply.workable.com
+          Known ATS (fast): boards.greenhouse.io, jobs.lever.co, jobs.ashbyhq.com, apply.workable.com
+          <br />
+          Any other URL is scraped via JSON-LD — works for most company career pages.
         </p>
       </form>
 
@@ -77,8 +79,8 @@ export default async function WatchlistPage() {
                     {ATS_LABELS[p.ats_type] ?? p.ats_type}
                   </span>
                 ) : (
-                  <span className="rounded-full bg-muted text-muted-foreground text-xs px-2.5 py-0.5">
-                    Unknown ATS
+                  <span className="rounded-full bg-secondary text-secondary-foreground text-xs px-2.5 py-0.5 font-medium">
+                    JSON-LD
                   </span>
                 )}
                 <form action={togglePortal.bind(null, p.id, !p.is_active)}>
