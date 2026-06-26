@@ -35,23 +35,18 @@ export async function GET(request: Request) {
   }
 
   let emailsSent = 0
-  const debug: Record<string, unknown>[] = []
 
   for (const pref of prefs ?? []) {
     const cutoff = pref.last_alert_sent_at ?? defaultCutoff
-    const d: Record<string, unknown> = { cutoff }
 
-    const { data: jobs, error: jobsError } = await supabase
+    const { data: jobs } = await supabase
       .from("jobs")
       .select("id,title,company,location,remote,url,description_md,posted_at")
       .gte("posted_at", cutoff)
       .order("posted_at", { ascending: false })
       .limit(MAX_JOBS_PER_USER)
 
-    d.jobs_found = jobs?.length ?? 0
-    d.jobs_error = jobsError?.message ?? null
-
-    if (!jobs?.length) { debug.push(d); continue }
+    if (!jobs?.length) continue
 
     const prefInput: Omit<Preference, "user_id"> = {
       job_titles: pref.job_titles ?? [],
@@ -64,25 +59,19 @@ export async function GET(request: Request) {
     }
 
     const matches: { job_id: string; score: number; reasons: string[]; job: typeof jobs[0] }[] = []
-    const sampleScores: { title: string; score: number; reasons: string[] }[] = []
 
     for (const job of jobs) {
       const result = score(
         { title: job.title, company: job.company, location: job.location, remote: job.remote, description_md: job.description_md },
         prefInput,
       )
-      if (sampleScores.length < 5) sampleScores.push({ title: job.title, score: result.score, reasons: result.reasons })
       if (result.score >= SCORE_THRESHOLD) {
         matches.push({ job_id: job.id, score: result.score, reasons: result.reasons, job })
       }
     }
 
-    d.matches_found = matches.length
-    d.sample_scores = sampleScores
+    if (matches.length === 0) continue
 
-    if (matches.length === 0) { debug.push(d); continue }
-
-    // Upsert match records
     await supabase.from("job_matches").upsert(
       matches.map(({ job_id, score: s, reasons }) => ({
         user_id: pref.user_id, job_id, score: s, reason: reasons, status: "new", matched_at: now.toISOString(),
@@ -92,26 +81,21 @@ export async function GET(request: Request) {
 
     const { data: userData } = await supabase.auth.admin.getUserById(pref.user_id)
     const email = userData?.user?.email
-    d.email_found = !!email
-
     if (email) {
-      const result = await sendJobAlert(
+      const { ok } = await sendJobAlert(
         email,
         matches.map(({ job, score: s, reasons }) => ({
           title: job.title, company: job.company, location: job.location, url: job.url, score: s, reasons,
         })),
       )
-      d.email_sent = result.ok
-      d.email_error = result.error ?? null
-      d.resend_from = process.env.RESEND_FROM ?? "(not set — using default)"
-      if (result.ok) {
+      if (ok) {
         emailsSent++
         await supabase.from("preferences").update({ last_alert_sent_at: now.toISOString() }).eq("user_id", pref.user_id)
+      } else {
+        console.error(`[alerts] Resend failed for user ${pref.user_id}`)
       }
     }
-
-    debug.push(d)
   }
 
-  return NextResponse.json({ ok: true, users: prefs?.length ?? 0, emails_sent: emailsSent, debug })
+  return NextResponse.json({ ok: true, users: prefs?.length ?? 0, emails_sent: emailsSent })
 }
