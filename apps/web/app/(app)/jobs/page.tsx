@@ -12,6 +12,8 @@ const SOURCE_LABELS: Record<string, string> = {
   hn: "HN",
   linkedin: "LinkedIn",
   portal: "Portal",
+  indeed: "Indeed",
+  zip_recruiter: "ZipRecruiter",
 }
 
 const REMOTE_CHIPS: Record<string, string> = {
@@ -39,6 +41,22 @@ export default async function JobsPage({
   const filters = await searchParams
   const supabase = await createClient()
 
+  const locationParamSet = "location" in filters
+  let prefLocations: string[] = []
+  if (!locationParamSet) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (user) {
+      const { data: pref } = await supabase
+        .from("preferences")
+        .select("locations")
+        .eq("user_id", user.id)
+        .maybeSingle()
+      prefLocations = pref?.locations ?? []
+    }
+  }
+
   const page = Math.max(1, Number(filters.page ?? 1))
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
@@ -54,6 +72,12 @@ export default async function JobsPage({
   }
   if (filters.location) {
     query = query.ilike("location", `%${filters.location}%`)
+  } else if (prefLocations.length > 0) {
+    const locationOr = prefLocations
+      .map((l) => `location.ilike.%${l}%`)
+      .concat("remote.eq.remote")
+      .join(",")
+    query = query.or(locationOr)
   }
   if (filters.remote && ["remote", "hybrid", "onsite"].includes(filters.remote)) {
     query = query.eq("remote", filters.remote as RemoteMode)
@@ -61,7 +85,6 @@ export default async function JobsPage({
   if (filters.since) {
     const days = parseInt(filters.since, 10)
     if (!isNaN(days)) {
-      // eslint-disable-next-line react-hooks/purity
       const cutoff = new Date(Date.now() - days * 86400_000).toISOString()
       query = query.gte("posted_at", cutoff)
     }
@@ -70,6 +93,7 @@ export default async function JobsPage({
   const { data: jobs, count } = await query
 
   const totalPages = Math.ceil((count ?? 0) / PAGE_SIZE)
+  const usingPrefFilter = !locationParamSet && prefLocations.length > 0
 
   return (
     <>
@@ -83,6 +107,18 @@ export default async function JobsPage({
       <Suspense>
         <FilterBar />
       </Suspense>
+
+      {usingPrefFilter && (
+        <div className="mb-4 flex items-center gap-2 rounded-xl bg-primary/8 px-4 py-2.5 text-sm text-primary">
+          <span>Filtered by your location preferences: <strong>{prefLocations.join(", ")}</strong> + remote</span>
+          <a
+            href="/jobs?location="
+            className="ml-auto shrink-0 text-xs underline underline-offset-2 hover:opacity-70"
+          >
+            Show all
+          </a>
+        </div>
+      )}
 
       {!jobs || jobs.length === 0 ? (
         <div className="rounded-2xl border bg-card p-12 text-center">
@@ -122,7 +158,7 @@ export default async function JobsPage({
                 </div>
                 {job.posted_at && (
                   <p className="text-xs text-muted-foreground mt-2">
-                    {new Date(job.posted_at).toLocaleDateString("en-US", {
+                    {new Date(job.posted_at).toLocaleDateString("en-IN", {
                       month: "short",
                       day: "numeric",
                       year: "numeric",
