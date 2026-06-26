@@ -2,11 +2,15 @@
 1. requests + JSON-LD  (fast, works for SSR pages)
 2. Playwright + JSON-LD (renders JS, catches SPA-injected JSON-LD)
 3. Playwright listing → discover job links → requests per link
+
+Bonus: if the rendered page embeds a known ATS (Greenhouse/Lever/Ashby/Workable),
+the company_portals record is updated so ingest-ats picks it up next run.
 """
 
 import hashlib
 import json
 import re
+import sys
 import time
 from urllib.parse import urljoin, urlparse
 
@@ -16,12 +20,22 @@ from bs4 import BeautifulSoup
 REMOTE_PATTERNS = re.compile(r"\b(remote|distributed|anywhere|wfh|work from home)\b", re.I)
 HYBRID_PATTERNS = re.compile(r"\b(hybrid|flexible|part.?remote)\b", re.I)
 
+# URL-path patterns that suggest individual job postings
 JOB_PATH_RE = re.compile(
     r"/(job|jobs|career|careers|position|positions|opening|openings|role|roles|vacancy|vacancies)/",
     re.I,
 )
-
 JOB_CLASS_RE = re.compile(r"job|position|role|opening|vacancy", re.I)
+
+# Known ATS patterns to detect from rendered page HTML
+ATS_DETECTORS = [
+    (re.compile(r'boards\.greenhouse\.io/([a-zA-Z0-9_-]+)'), "greenhouse"),
+    (re.compile(r'job-boards\.greenhouse\.io/([a-zA-Z0-9_-]+)'), "greenhouse"),
+    (re.compile(r'jobs\.lever\.co/([a-zA-Z0-9_-]+)'), "lever"),
+    (re.compile(r'jobs\.ashbyhq\.com/([a-zA-Z0-9_-]+)'), "ashby"),
+    (re.compile(r'apply\.workable\.com/([a-zA-Z0-9_-]+)'), "workable"),
+    (re.compile(r'([a-zA-Z0-9_-]+)\.workable\.com'), "workable"),
+]
 
 HEADERS = {
     "User-Agent": (
@@ -36,6 +50,10 @@ MAX_JOB_LINKS = 40
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
+
+def _log(msg: str) -> None:
+    print(msg, flush=True)
+
 
 def _make_source_id(url: str) -> str:
     return f"portal_{hashlib.md5(url.encode()).hexdigest()[:16]}"
@@ -75,7 +93,6 @@ def _parse_location(job_location) -> str | None:
 
 
 def _extract_jsonld_jobs(html: str, page_url: str, company_name: str) -> list[dict]:
-    """Parse all schema.org/JobPosting JSON-LD blocks from an HTML page."""
     soup = BeautifulSoup(html, "lxml")
     jobs: list[dict] = []
 
@@ -92,7 +109,6 @@ def _extract_jsonld_jobs(html: str, page_url: str, company_name: str) -> list[di
             i += 1
             if not isinstance(item, dict):
                 continue
-            # unwrap @graph
             if "@graph" in item and item.get("@type", "") != "JobPosting":
                 items.extend(item["@graph"])
                 continue
@@ -106,10 +122,8 @@ def _extract_jsonld_jobs(html: str, page_url: str, company_name: str) -> list[di
 
             org = item.get("hiringOrganization") or {}
             company = (org.get("name") if isinstance(org, dict) else None) or company_name
-
             location = _parse_location(item.get("jobLocation"))
             remote = _infer_remote(str(item.get("jobLocationType") or ""), location)
-            description = str(item.get("description") or "")[:8000] or None
 
             jobs.append({
                 "source": "portal",
@@ -120,15 +134,25 @@ def _extract_jsonld_jobs(html: str, page_url: str, company_name: str) -> list[di
                 "remote": remote,
                 "posted_at": item.get("datePosted"),
                 "url": url,
-                "description_md": description,
+                "description_md": str(item.get("description") or "")[:8000] or None,
                 "raw_payload": {},
             })
 
     return jobs
 
 
+def _detect_embedded_ats(html: str) -> tuple[str, str] | None:
+    """Scan rendered HTML for embedded ATS iframes / script tags / links."""
+    for pattern, ats_type in ATS_DETECTORS:
+        m = pattern.search(html)
+        if m:
+            slug = m.group(1).split("?")[0].rstrip("/")
+            return ats_type, slug
+    return None
+
+
 def _discover_job_links(html: str, base_url: str) -> list[str]:
-    """Extract links that likely lead to individual job postings."""
+    """Extract links that likely point to individual job postings."""
     base_domain = urlparse(base_url).netloc
     soup = BeautifulSoup(html, "lxml")
     seen: set[str] = set()
@@ -142,13 +166,12 @@ def _discover_job_links(html: str, base_url: str) -> list[str]:
         full = urljoin(base_url, href)
         parsed = urlparse(full)
 
+        # same-domain only (external ATS handled via ATS detection)
         if parsed.netloc != base_domain:
             continue
 
         path = parsed.path
-        # match job-like URL paths
         path_match = JOB_PATH_RE.search(path)
-        # or job-like class on the <a> or a parent
         class_match = JOB_CLASS_RE.search(" ".join(a.get("class", []))) or any(
             JOB_CLASS_RE.search(" ".join(p.get("class", [])))
             for p in a.parents
@@ -161,7 +184,6 @@ def _discover_job_links(html: str, base_url: str) -> list[str]:
         clean = parsed._replace(fragment="").geturl()
         if clean == base_url or clean in seen:
             continue
-
         seen.add(clean)
         links.append(clean)
         if len(links) >= MAX_JOB_LINKS:
@@ -173,40 +195,48 @@ def _discover_job_links(html: str, base_url: str) -> list[str]:
 # ── fetch strategies ──────────────────────────────────────────────────────────
 
 def _fetch_static(url: str) -> str | None:
-    """Plain HTTP fetch — fast, no JS execution."""
     try:
         resp = requests.get(url, timeout=20, headers=HEADERS, allow_redirects=True)
         resp.raise_for_status()
         return resp.text
     except Exception as e:
-        print(f"  [WARN] static fetch({url}): {e}")
+        _log(f"  [WARN] static fetch({url}): {e}")
         return None
 
 
 def _fetch_rendered(url: str) -> str | None:
-    """Headless Chromium via Playwright — renders JS before returning HTML."""
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        print("  [WARN] playwright not installed — skipping JS render")
+        _log("  [WARN] playwright not installed — skipping JS render")
         return None
 
+    _log(f"  [playwright] launching Chromium for {url}")
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
             ctx = browser.new_context(user_agent=HEADERS["User-Agent"], locale="en-US")
             page = ctx.new_page()
             try:
-                page.goto(url, wait_until="domcontentloaded", timeout=30_000)
-                # Give React/Vue/Angular time to mount and inject JSON-LD
-                page.wait_for_timeout(3_000)
-            except Exception:
-                pass  # grab whatever rendered so far
+                # networkidle waits until no network requests for 500ms
+                # — ensures React/Vue has finished fetching job data
+                page.goto(url, wait_until="networkidle", timeout=45_000)
+                _log(f"  [playwright] networkidle reached for {url}")
+            except Exception as e:
+                _log(f"  [playwright] networkidle timeout ({e}), grabbing current content")
+                try:
+                    # extra buffer for late-loading JS
+                    page.wait_for_timeout(5_000)
+                except Exception:
+                    pass
             html = page.content()
+            soup = BeautifulSoup(html, "lxml")
+            visible_text = soup.get_text()[:200].replace("\n", " ").strip()
+            _log(f"  [playwright] page size={len(html)} chars, text preview: {visible_text!r}")
             browser.close()
             return html
     except Exception as e:
-        print(f"  [WARN] playwright render({url}): {e}")
+        _log(f"  [WARN] playwright render({url}): {e}")
         return None
 
 
@@ -214,51 +244,49 @@ def _fetch_rendered(url: str) -> str | None:
 
 def scrape_portal(company_name: str, career_url: str) -> list[dict]:
     """
-    Scrape a career page for job postings.
-
-    Level 1 — requests + JSON-LD (fast, SSR pages)
-    Level 2 — Playwright + JSON-LD (JS-rendered pages)
+    Level 1 — requests + JSON-LD
+    Level 2 — Playwright + JSON-LD
     Level 3 — Playwright listing → discover links → requests per job page
+    Returns (jobs, rendered_html) so callers can run ATS detection.
     """
-    # Level 1: plain HTTP
+    # Level 1
     html = _fetch_static(career_url)
     if html:
         jobs = _extract_jsonld_jobs(html, career_url, company_name)
         if jobs:
-            print(f"  [portal] {company_name}: {len(jobs)} jobs via static JSON-LD")
+            _log(f"  [portal] {company_name}: {len(jobs)} jobs via static JSON-LD")
             return jobs
 
-    # Level 2: Playwright render
-    print(f"  [portal] {company_name}: no static JSON-LD → rendering with Playwright")
+    # Level 2
+    _log(f"  [portal] {company_name}: no static JSON-LD → rendering with Playwright")
     rendered = _fetch_rendered(career_url)
     if not rendered:
         return []
 
     jobs = _extract_jsonld_jobs(rendered, career_url, company_name)
     if jobs:
-        print(f"  [portal] {company_name}: {len(jobs)} jobs via rendered JSON-LD")
+        _log(f"  [portal] {company_name}: {len(jobs)} jobs via rendered JSON-LD")
         return jobs
 
-    # Level 3: discover individual job links from rendered listing page
+    # Level 3
     links = _discover_job_links(rendered, career_url)
     if not links:
-        print(f"  [portal] {company_name}: no JSON-LD and no job links found")
+        _log(f"  [portal] {company_name}: no JSON-LD and no job links found in rendered page")
         return []
 
-    print(f"  [portal] {company_name}: found {len(links)} job links → scraping each")
+    _log(f"  [portal] {company_name}: found {len(links)} job links → scraping each")
     jobs = []
     for link in links:
-        link_html = _fetch_static(link)  # individual job pages are usually SSR
+        link_html = _fetch_static(link)
         if link_html:
             jobs.extend(_extract_jsonld_jobs(link_html, link, company_name))
         time.sleep(0.3)
 
-    print(f"  [portal] {company_name}: {len(jobs)} jobs via link discovery")
+    _log(f"  [portal] {company_name}: {len(jobs)} jobs via link discovery")
     return jobs
 
 
 def scrape_portals_from_db(supabase) -> int:
-    """Scrape all active company_portals where ats_type is unknown."""
     result = (
         supabase.table("company_portals")
         .select("id,company_name,career_url")
@@ -268,21 +296,62 @@ def scrape_portals_from_db(supabase) -> int:
     )
     portals = result.data or []
     if not portals:
-        print("[portals] no unknown-ATS portals to scrape")
+        _log("[portals] no unknown-ATS portals to scrape")
         return 0
 
     total = 0
     for portal in portals:
         company = portal["company_name"]
         url = portal["career_url"]
-        print(f"[portals] scraping {company} ({url})")
+        portal_id = portal["id"]
+        _log(f"[portals] scraping {company} ({url})")
 
-        jobs = scrape_portal(company, url)
+        # First render the page so we can do ATS detection regardless of job count
+        rendered = _fetch_rendered(url)
+
+        # ATS auto-detection — if the page embeds a known ATS, upgrade the portal record
+        if rendered:
+            detected = _detect_embedded_ats(rendered)
+            if detected:
+                ats_type, ats_slug = detected
+                _log(f"  [portals] {company}: detected embedded {ats_type} ATS (slug={ats_slug}) → updating DB")
+                try:
+                    supabase.table("company_portals").update(
+                        {"ats_type": ats_type, "ats_slug": ats_slug}
+                    ).eq("id", portal_id).execute()
+                    _log(f"  [portals] {company}: portal updated — will be ingested by ingest-ats on next run")
+                except Exception as e:
+                    _log(f"  [portals] {company}: DB update error: {e}")
+                time.sleep(1)
+                continue
+
+        # No known ATS detected — try JSON-LD + link discovery
+        jobs: list[dict] = []
+        if rendered:
+            jobs = _extract_jsonld_jobs(rendered, url, company)
+            if not jobs:
+                links = _discover_job_links(rendered, url)
+                if links:
+                    _log(f"  [portals] {company}: found {len(links)} job links → scraping each")
+                    for link in links:
+                        link_html = _fetch_static(link)
+                        if link_html:
+                            jobs.extend(_extract_jsonld_jobs(link_html, link, company))
+                        time.sleep(0.3)
+                else:
+                    _log(f"  [portals] {company}: no JSON-LD and no job links found")
+
         if not jobs:
+            time.sleep(1)
             continue
 
         seen: set[str] = set()
-        deduped = [j for j in jobs if not (seen.add(j["source_job_id"]) or j["source_job_id"] in seen)]
+        deduped = []
+        for j in jobs:
+            key = j["source_job_id"]
+            if key not in seen:
+                seen.add(key)
+                deduped.append(j)
 
         try:
             supabase.table("jobs").upsert(
@@ -291,9 +360,9 @@ def scrape_portals_from_db(supabase) -> int:
                 ignore_duplicates=False,
             ).execute()
             total += len(deduped)
-            print(f"  [portals] {company}: upserted {len(deduped)} jobs")
+            _log(f"  [portals] {company}: upserted {len(deduped)} jobs")
         except Exception as e:
-            print(f"  [portals] {company}: upsert error: {e}")
+            _log(f"  [portals] {company}: upsert error: {e}")
 
         time.sleep(1)
 
