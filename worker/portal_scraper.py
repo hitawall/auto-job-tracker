@@ -36,7 +36,13 @@ ATS_DETECTORS = [
     (re.compile(r'jobs\.ashbyhq\.com/([a-zA-Z0-9_-]+)'), "ashby"),
     (re.compile(r'apply\.workable\.com/([a-zA-Z0-9_-]+)'), "workable"),
     (re.compile(r'([a-zA-Z0-9_-]+)\.workable\.com'), "workable"),
+    (re.compile(r'jobs\.smartrecruiters\.com/([a-zA-Z0-9_-]+)'), "smartrecruiters"),
+    (re.compile(r'([a-zA-Z0-9_-]+)\.breezy\.hr'), "breezy"),
+    (re.compile(r'([a-zA-Z0-9_-]+)\.recruitee\.com'), "recruitee"),
 ]
+
+# Workday needs special multi-group detection
+_WORKDAY_RE = re.compile(r'([a-zA-Z0-9_-]+)\.(wd\d+)\.myworkdayjobs\.com/([a-zA-Z0-9_-]+)')
 
 HEADERS = {
     "User-Agent": (
@@ -205,6 +211,14 @@ def _extract_nextdata_jobs(html: str, page_url: str, company_name: str) -> list[
 
 def _detect_embedded_ats(html: str) -> tuple[str, str] | None:
     """Scan rendered HTML for embedded ATS iframes / script tags / links."""
+    # Workday — needs three capture groups to build the slug
+    m = _WORKDAY_RE.search(html)
+    if m:
+        subdomain, wdpart, tenant = m.group(1), m.group(2), m.group(3)
+        wdn = wdpart.replace("wd", "")
+        slug = f"{subdomain}|{wdn}|{tenant.split('?')[0].rstrip('/')}"
+        return "workday", slug
+
     for pattern, ats_type in ATS_DETECTORS:
         m = pattern.search(html)
         if m:

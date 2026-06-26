@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
-import { greenhouse, lever, ashby, workable, remoteok, hn, companies } from "@repo/ingest"
+import { greenhouse, lever, ashby, workable, workday, smartrecruiters, breezy, recruitee, remoteok, hn, companies } from "@repo/ingest"
 import type { NormalizedJob } from "@repo/types"
 
 const COMPANY_ADAPTERS = {
@@ -8,6 +8,10 @@ const COMPANY_ADAPTERS = {
   lever,
   ashby,
   workable,
+  workday,
+  smartrecruiters,
+  breezy,
+  recruitee,
 } as const
 
 type CompanySource = keyof typeof COMPANY_ADAPTERS
