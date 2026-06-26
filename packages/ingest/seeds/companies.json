@@ -19,5 +19,19 @@
   "workable": [
     "typeform", "hotjar", "beat", "skroutz",
     "blueground", "epignosis", "accusoft"
-  ]
+  ],
+  "workday": [
+    "salesforce|1|External_Career_Site",
+    "cisco|5|External",
+    "adobe|5|external_experienced",
+    "paypal|1|jobs",
+    "servicenow|1|External",
+    "mastercard|1|Mastercard_Careers",
+    "deloitte|1|consulting_us"
+  ],
+  "smartrecruiters": [
+    "BOSCH", "Lidl", "LinkedIn", "Delivery-Hero", "Zalando"
+  ],
+  "breezy": [],
+  "recruitee": []
 }
