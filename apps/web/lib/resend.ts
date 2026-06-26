@@ -12,10 +12,10 @@ interface AlertJob {
   reasons: string[]
 }
 
-export async function sendJobAlert(to: string, jobs: AlertJob[]): Promise<void> {
+export async function sendJobAlert(to: string, jobs: AlertJob[]): Promise<boolean> {
   if (!resend) {
     console.warn("[resend] RESEND_API_KEY not set — skipping email")
-    return
+    return false
   }
 
   const rows = jobs
@@ -62,5 +62,9 @@ export async function sendJobAlert(to: string, jobs: AlertJob[]): Promise<void> 
     html,
   })
 
-  if (error) console.error("[resend] send error", error)
+  if (error) {
+    console.error("[resend] send error", JSON.stringify(error))
+    return false
+  }
+  return true
 }

@@ -42,8 +42,8 @@ export async function GET(request: Request) {
     const { data: jobs } = await supabase
       .from("jobs")
       .select("id,title,company,location,remote,url,description_md,posted_at")
-      .gte("posted_at", cutoff)
-      .order("posted_at", { ascending: false })
+      .or(`posted_at.gte.${cutoff},posted_at.is.null`)
+      .order("posted_at", { ascending: false, nullsFirst: false })
       .limit(MAX_JOBS_PER_USER)
 
     if (!jobs?.length) continue
@@ -95,7 +95,7 @@ export async function GET(request: Request) {
     const { data: userData } = await supabase.auth.admin.getUserById(pref.user_id)
     const email = userData?.user?.email
     if (email) {
-      await sendJobAlert(
+      const sent = await sendJobAlert(
         email,
         matches.map(({ job, score: s, reasons }) => ({
           title: job.title,
@@ -106,7 +106,8 @@ export async function GET(request: Request) {
           reasons,
         })),
       )
-      emailsSent++
+      if (sent) emailsSent++
+      else console.error(`[alerts] email failed for user ${pref.user_id}`)
     }
 
     await supabase
