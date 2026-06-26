@@ -26,6 +26,7 @@ JOB_PATH_RE = re.compile(
     re.I,
 )
 JOB_CLASS_RE = re.compile(r"job|position|role|opening|vacancy", re.I)
+JOB_PARAM_RE = re.compile(r"[?&](job_?id|jobId|jid|req_?id|requisition_?id|position_?id)=", re.I)
 
 # Known ATS patterns to detect from rendered page HTML
 ATS_DETECTORS = [
@@ -141,6 +142,67 @@ def _extract_jsonld_jobs(html: str, page_url: str, company_name: str) -> list[di
     return jobs
 
 
+def _extract_nextdata_jobs(html: str, page_url: str, company_name: str) -> list[dict]:
+    """Pull job listings from Next.js __NEXT_DATA__ SSR payload."""
+    soup = BeautifulSoup(html, "lxml")
+    script = soup.find("script", id="__NEXT_DATA__")
+    if not script or not script.string:
+        return []
+
+    try:
+        data = json.loads(script.string)
+    except Exception:
+        return []
+
+    # Walk the JSON tree looking for objects that look like job postings
+    jobs: list[dict] = []
+
+    def walk(node, depth=0):
+        if depth > 12:
+            return
+        if isinstance(node, list):
+            for item in node:
+                walk(item, depth + 1)
+        elif isinstance(node, dict):
+            keys = {k.lower() for k in node}
+            # Heuristic: has title/name + some URL/id field → likely a job object
+            has_title = bool(node.get("title") or node.get("name"))
+            has_url = bool(node.get("url") or node.get("jobUrl") or node.get("applyUrl") or node.get("link"))
+            has_id = bool(node.get("id") or node.get("jobId") or node.get("requisitionId"))
+            if has_title and (has_url or has_id):
+                title = (node.get("title") or node.get("name") or "").strip()
+                url = (
+                    node.get("url") or node.get("jobUrl") or
+                    node.get("applyUrl") or node.get("link") or page_url
+                )
+                if title and len(title) > 3 and len(title) < 200:
+                    location = (
+                        node.get("location") or node.get("city") or
+                        node.get("locationName") or node.get("office") or ""
+                    )
+                    if isinstance(location, dict):
+                        location = location.get("name") or location.get("city") or ""
+                    remote_text = str(node.get("workplaceType") or node.get("remoteType") or location or "")
+                    jobs.append({
+                        "source": "portal",
+                        "source_job_id": _make_source_id(url if url != page_url else f"{page_url}#{node.get('id',title)}"),
+                        "title": title,
+                        "company": company_name,
+                        "location": location or None,
+                        "remote": _infer_remote(None, remote_text),
+                        "posted_at": node.get("postedDate") or node.get("publishedDate") or node.get("datePosted"),
+                        "url": url,
+                        "description_md": str(node.get("description") or node.get("summary") or "")[:8000] or None,
+                        "raw_payload": {},
+                    })
+                    return  # don't recurse into a job node
+            for v in node.values():
+                walk(v, depth + 1)
+
+    walk(data)
+    return jobs
+
+
 def _detect_embedded_ats(html: str) -> tuple[str, str] | None:
     """Scan rendered HTML for embedded ATS iframes / script tags / links."""
     for pattern, ats_type in ATS_DETECTORS:
@@ -171,14 +233,16 @@ def _discover_job_links(html: str, base_url: str) -> list[str]:
             continue
 
         path = parsed.path
+        query = parsed.query
         path_match = JOB_PATH_RE.search(path)
+        param_match = JOB_PARAM_RE.search(query) if query else False
         class_match = JOB_CLASS_RE.search(" ".join(a.get("class", []))) or any(
             JOB_CLASS_RE.search(" ".join(p.get("class", [])))
             for p in a.parents
             if hasattr(p, "get") and p.get("class")
         )
 
-        if not (path_match or class_match):
+        if not (path_match or param_match or class_match):
             continue
 
         clean = parsed._replace(fragment="").geturl()
@@ -223,16 +287,26 @@ def _fetch_rendered(url: str) -> str | None:
                 page.goto(url, wait_until="networkidle", timeout=45_000)
                 _log(f"  [playwright] networkidle reached for {url}")
             except Exception as e:
-                _log(f"  [playwright] networkidle timeout ({e}), grabbing current content")
+                _log(f"  [playwright] networkidle timeout ({e}), continuing")
                 try:
-                    # extra buffer for late-loading JS
-                    page.wait_for_timeout(5_000)
+                    page.wait_for_timeout(3_000)
                 except Exception:
                     pass
+
+            # Scroll to trigger intersection-observer / infinite-scroll lazy loading
+            try:
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(2_000)
+                page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+                page.wait_for_timeout(1_500)
+            except Exception:
+                pass
+
             html = page.content()
             soup = BeautifulSoup(html, "lxml")
-            visible_text = soup.get_text()[:200].replace("\n", " ").strip()
-            _log(f"  [playwright] page size={len(html)} chars, text preview: {visible_text!r}")
+            visible_text = soup.get_text()[:300].replace("\n", " ").strip()
+            link_count = len(soup.find_all("a", href=True))
+            _log(f"  [playwright] size={len(html)} links={link_count} preview: {visible_text!r}")
             browser.close()
             return html
     except Exception as e:
@@ -325,10 +399,14 @@ def scrape_portals_from_db(supabase) -> int:
                 time.sleep(1)
                 continue
 
-        # No known ATS detected — try JSON-LD + link discovery
+        # No known ATS detected — try JSON-LD → __NEXT_DATA__ → link discovery
         jobs: list[dict] = []
         if rendered:
             jobs = _extract_jsonld_jobs(rendered, url, company)
+            if not jobs:
+                jobs = _extract_nextdata_jobs(rendered, url, company)
+                if jobs:
+                    _log(f"  [portals] {company}: {len(jobs)} jobs via __NEXT_DATA__")
             if not jobs:
                 links = _discover_job_links(rendered, url)
                 if links:
@@ -339,7 +417,7 @@ def scrape_portals_from_db(supabase) -> int:
                             jobs.extend(_extract_jsonld_jobs(link_html, link, company))
                         time.sleep(0.3)
                 else:
-                    _log(f"  [portals] {company}: no JSON-LD and no job links found")
+                    _log(f"  [portals] {company}: no JSON-LD, no __NEXT_DATA__, no job links found")
 
         if not jobs:
             time.sleep(1)
