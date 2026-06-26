@@ -40,6 +40,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             >
               Preferences
             </Link>
+            <Link
+              href="/about"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              About
+            </Link>
           </nav>
           <form action="/auth/signout" method="post">
             <button
