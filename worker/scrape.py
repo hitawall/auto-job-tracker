@@ -23,9 +23,9 @@ SEARCH_TERMS = [
     "Product Designer",
 ]
 
-SITES = ["indeed", "zip_recruiter"]
+SITES = ["linkedin", "indeed"]
 
-LOCATIONS = ["Remote", "India"]
+LOCATIONS = ["Bengaluru", "Mumbai", "Hyderabad", "Pune", "Delhi NCR"]
 
 REMOTE_PATTERNS = re.compile(r"\b(remote|distributed|anywhere|wfh|work from home)\b", re.I)
 HYBRID_PATTERNS = re.compile(r"\b(hybrid|flexible|part.?remote)\b", re.I)
@@ -98,6 +98,8 @@ def main():
                     results_wanted=50,
                     hours_old=24,
                     description_format="markdown",
+                    country_indeed="IN",
+                    linkedin_fetch_description=True,
                 )
             except Exception as e:
                 print(f"[WARN] scrape_jobs({term!r} @ {loc!r}) failed: {e}")
