@@ -2,6 +2,8 @@ import { Resend } from "resend"
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null
 const FROM = process.env.RESEND_FROM ?? "Job Tracker <alerts@jobtracker.dev>"
+// Overrides the recipient — use while Resend sandbox limits sending to account owner's email only
+const TO_OVERRIDE = process.env.RESEND_TO_OVERRIDE ?? null
 
 interface AlertJob {
   title: string
@@ -56,7 +58,7 @@ export async function sendJobAlert(to: string, jobs: AlertJob[]): Promise<{ ok: 
 
   const { error } = await resend.emails.send({
     from: FROM,
-    to,
+    to: TO_OVERRIDE ?? to,
     subject: `${jobs.length} new job match${jobs.length === 1 ? "" : "es"} for you`,
     html,
   })
